@@ -1,0 +1,23 @@
+{
+  "timestamp_utc": "2026-10-11T05:22:27.274380+00:00",
+  "runner_mode": "api",
+  "total_cases": 140,
+  "valid_cases": 90,
+  "invalid_cases": 50,
+  "overall_accuracy_pct": 100.0,
+  "price_match_rate_pct": 100.0,
+  "error_rejection_rate_pct": 100.0,
+  "determinism_rate_pct": 100.0,
+  "trace_completeness_rate_pct": 100.0,
+  "rule_detection": {
+    "precision_pct": 95.58,
+    "recall_pct": 100.0,
+    "f1_score_pct": 97.74,
+    "true_positives": 173,
+    "false_positives": 8,
+    "false_negatives": 0
+  },
+  "constraint_violations_count": 0,
+  "total_mismatches": 0,
+  "mismatches": []
+}

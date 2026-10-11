@@ -1,0 +1,120 @@
+{
+  "pack_id": "hospitality",
+  "version": "1.0.0",
+  "description": "Hotel room night pricing. Demonstrates threshold rules, percentage adjustments, customer discounts, staged stacking, floor/ceiling, and rounding.",
+
+  "unit": {
+    "kind": "currency",
+    "code": "INR",
+    "decimals": 0
+  },
+
+  "entity": {
+    "name": "room_night",
+    "attributes": [
+      {
+        "key": "room_type",
+        "type": "enum",
+        "values": ["standard", "deluxe", "suite"]
+      }
+    ]
+  },
+
+  "signals": [
+    { "key": "room_type",     "type": "enum",    "values": ["standard", "deluxe", "suite"], "required": true },
+    { "key": "occupancy_pct", "type": "number",  "min": 0,   "max": 100,  "required": true },
+    { "key": "days_to_stay",  "type": "integer", "min": 1,   "max": 365,  "required": false },
+    { "key": "stay_date_dow", "type": "enum",    "values": ["mon","tue","wed","thu","fri","sat","sun"], "required": false },
+    { "key": "loyalty_tier",  "type": "enum",    "values": ["none","silver","gold"],         "required": false }
+  ],
+
+  "base": {
+    "type": "table",
+    "by": "room_type",
+    "values": {
+      "standard": 3200,
+      "deluxe":   4500,
+      "suite":    8000
+    }
+  },
+
+  "stages": [
+    { "id": "demand",   "stacking": "first",        "description": "Highest-priority demand tier wins" },
+    { "id": "weekend",  "stacking": "all",           "description": "Weekend uplift stacks on demand" },
+    { "id": "customer", "stacking": "max_discount",  "description": "Best loyalty discount applied" }
+  ],
+
+  "rules": [
+    {
+      "id": "R-DEMAND-VERY-HIGH",
+      "stage": "demand",
+      "priority": 30,
+      "description": "Very high occupancy (≥95%) → +40%",
+      "when": { "all": [{ "signal": "occupancy_pct", "op": "gte", "value": 95 }] },
+      "then": { "op": "multiply", "value": 1.40 }
+    },
+    {
+      "id": "R-DEMAND-HIGH",
+      "stage": "demand",
+      "priority": 20,
+      "description": "High occupancy (≥85%) → +30%",
+      "when": { "all": [{ "signal": "occupancy_pct", "op": "gte", "value": 85 }] },
+      "then": { "op": "multiply", "value": 1.30 }
+    },
+    {
+      "id": "R-DEMAND-MED",
+      "stage": "demand",
+      "priority": 10,
+      "description": "Medium occupancy (≥70%) → +10%",
+      "when": { "all": [{ "signal": "occupancy_pct", "op": "gte", "value": 70 }] },
+      "then": { "op": "multiply", "value": 1.10 }
+    },
+    {
+      "id": "R-DEMAND-LOW",
+      "stage": "demand",
+      "priority": 5,
+      "description": "Low occupancy (<50%) → -10%",
+      "when": { "all": [{ "signal": "occupancy_pct", "op": "lt", "value": 50 }] },
+      "then": { "op": "multiply", "value": 0.90 }
+    },
+
+    {
+      "id": "R-WEEKEND",
+      "stage": "weekend",
+      "priority": 10,
+      "description": "Weekend stay (Fri/Sat) → +15%",
+      "when": { "any": [
+        { "signal": "stay_date_dow", "op": "eq", "value": "fri" },
+        { "signal": "stay_date_dow", "op": "eq", "value": "sat" }
+      ]},
+      "then": { "op": "multiply", "value": 1.15 }
+    },
+
+    {
+      "id": "R-LOYALTY-GOLD",
+      "stage": "customer",
+      "priority": 20,
+      "description": "Gold member → -8%",
+      "when": { "all": [{ "signal": "loyalty_tier", "op": "eq", "value": "gold" }] },
+      "then": { "op": "multiply", "value": 0.92 }
+    },
+    {
+      "id": "R-LOYALTY-SILVER",
+      "stage": "customer",
+      "priority": 10,
+      "description": "Silver member → -5%",
+      "when": { "all": [{ "signal": "loyalty_tier", "op": "eq", "value": "silver" }] },
+      "then": { "op": "multiply", "value": 0.95 }
+    }
+  ],
+
+  "constraints": [
+    { "id": "C-FLOOR",   "type": "floor",   "expr": "base * 0.70" },
+    { "id": "C-CEILING", "type": "ceiling", "expr": "base * 2.50" }
+  ],
+
+  "rounding": {
+    "mode": "nearest",
+    "step": 10
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "pack_id": "banking",
+  "version": "1.0.0",
+  "description": "Personal loan interest rate pricing. Demonstrates lookup tables, risk-based pricing, regulatory caps, and different adjustment mechanisms.",
+
+  "unit": {
+    "kind": "rate",
+    "code": "PCT",
+    "decimals": 2
+  },
+
+  "entity": {
+    "name": "loan",
+    "attributes": [
+      {
+        "key": "loan_type",
+        "type": "enum",
+        "values": ["personal", "home", "auto", "education"]
+      }
+    ]
+  },
+
+  "signals": [
+    { "key": "loan_type",        "type": "enum",    "values": ["personal","home","auto","education"], "required": true },
+    { "key": "credit_score",     "type": "integer", "min": 300,     "max": 900,  "required": true },
+    { "key": "loan_amount",      "type": "number",  "min": 10000,   "max": 10000000, "required": true },
+    { "key": "loan_term_months", "type": "integer", "min": 6,       "max": 360,  "required": true },
+    { "key": "customer_segment", "type": "enum",    "values": ["new","regular","premium"], "required": false },
+    { "key": "risk_tier",        "type": "enum",    "values": ["low","medium","high","very_high"], "required": false }
+  ],
+
+  "base": {
+    "type": "table",
+    "by": "loan_type",
+    "values": {
+      "personal":  10.50,
+      "home":       8.75,
+      "auto":       9.25,
+      "education":  8.00
+    }
+  },
+
+  "stages": [
+    { "id": "credit_risk",   "stacking": "first",       "description": "Credit score tier — highest applicable wins" },
+    { "id": "amount_term",   "stacking": "all",          "description": "Loan amount and term adjustments stack" },
+    { "id": "relationship",  "stacking": "max_discount", "description": "Best customer relationship discount" }
+  ],
+
+  "rules": [
+    {
+      "id": "R-CREDIT-EXCELLENT",
+      "stage": "credit_risk",
+      "priority": 40,
+      "description": "Excellent credit (≥800) → -2.5 pp",
+      "when": { "all": [{ "signal": "credit_score", "op": "gte", "value": 800 }] },
+      "then": { "op": "add", "value": -2.5 }
+    },
+    {
+      "id": "R-CREDIT-GOOD",
+      "stage": "credit_risk",
+      "priority": 30,
+      "description": "Good credit (750–799) → -1.5 pp",
+      "when": { "all": [{ "signal": "credit_score", "op": "between", "value": [750, 799] }] },
+      "then": { "op": "add", "value": -1.5 }
+    },
+    {
+      "id": "R-CREDIT-FAIR",
+      "stage": "credit_risk",
+      "priority": 20,
+      "description": "Fair credit (650–749) → no change",
+      "when": { "all": [{ "signal": "credit_score", "op": "between", "value": [650, 749] }] },
+      "then": { "op": "multiply", "value": 1.0 }
+    },
+    {
+      "id": "R-CREDIT-POOR",
+      "stage": "credit_risk",
+      "priority": 10,
+      "description": "Poor credit (550–649) → +2 pp",
+      "when": { "all": [{ "signal": "credit_score", "op": "between", "value": [550, 649] }] },
+      "then": { "op": "add", "value": 2.0 }
+    },
+    {
+      "id": "R-CREDIT-VERY-POOR",
+      "stage": "credit_risk",
+      "priority": 5,
+      "description": "Very poor credit (<550) → +4 pp",
+      "when": { "all": [{ "signal": "credit_score", "op": "lt", "value": 550 }] },
+      "then": { "op": "add", "value": 4.0 }
+    },
+
+    {
+      "id": "R-LARGE-LOAN",
+      "stage": "amount_term",
+      "priority": 10,
+      "description": "Large loan (>500k) → -0.5 pp (volume discount)",
+      "when": { "all": [{ "signal": "loan_amount", "op": "gt", "value": 500000 }] },
+      "then": { "op": "add", "value": -0.5 }
+    },
+    {
+      "id": "R-LONG-TERM",
+      "stage": "amount_term",
+      "priority": 10,
+      "description": "Long term (>180 months) → +0.75 pp (duration risk)",
+      "when": { "all": [{ "signal": "loan_term_months", "op": "gt", "value": 180 }] },
+      "then": { "op": "add", "value": 0.75 }
+    },
+
+    {
+      "id": "R-PREMIUM-CUSTOMER",
+      "stage": "relationship",
+      "priority": 20,
+      "description": "Premium customer → -1 pp",
+      "when": { "all": [{ "signal": "customer_segment", "op": "eq", "value": "premium" }] },
+      "then": { "op": "add", "value": -1.0 }
+    },
+    {
+      "id": "R-REGULAR-CUSTOMER",
+      "stage": "relationship",
+      "priority": 10,
+      "description": "Regular customer → -0.5 pp",
+      "when": { "all": [{ "signal": "customer_segment", "op": "eq", "value": "regular" }] },
+      "then": { "op": "add", "value": -0.5 }
+    }
+  ],
+
+  "constraints": [
+    { "id": "C-REGULATORY-FLOOR",   "type": "floor",   "expr": "6.5"  },
+    { "id": "C-REGULATORY-CEILING", "type": "ceiling", "expr": "24.0" }
+  ],
+
+  "rounding": {
+    "mode": "nearest",
+    "step": 0.25
+  }
+}

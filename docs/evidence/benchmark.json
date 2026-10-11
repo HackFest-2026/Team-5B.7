@@ -1,0 +1,67 @@
+[
+  {
+    "domain": "hospitality",
+    "mode": "engine_in_memory",
+    "iterations": 500,
+    "concurrency": 1,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "p50_ms": 0.2079,
+    "p95_ms": 0.3577,
+    "p99_ms": 0.5848,
+    "mean_ms": 0.2347,
+    "rps": 4261.0
+  },
+  {
+    "domain": "ecommerce",
+    "mode": "engine_in_memory",
+    "iterations": 500,
+    "concurrency": 1,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "p50_ms": 0.2861,
+    "p95_ms": 0.4661,
+    "p99_ms": 0.6521,
+    "mean_ms": 0.3209,
+    "rps": 3116.0
+  },
+  {
+    "domain": "banking",
+    "mode": "engine_in_memory",
+    "iterations": 500,
+    "concurrency": 1,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "p50_ms": 0.1747,
+    "p95_ms": 0.2478,
+    "p99_ms": 0.3869,
+    "mean_ms": 0.1862,
+    "rps": 5369.5
+  },
+  {
+    "domain": "ev_charging",
+    "mode": "engine_in_memory",
+    "iterations": 500,
+    "concurrency": 1,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "p50_ms": 0.1668,
+    "p95_ms": 0.3563,
+    "p99_ms": 0.9907,
+    "mean_ms": 0.209,
+    "rps": 4785.1
+  },
+  {
+    "domain": "airline",
+    "mode": "engine_in_memory",
+    "iterations": 500,
+    "concurrency": 1,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "p50_ms": 0.2383,
+    "p95_ms": 0.4321,
+    "p99_ms": 0.5757,
+    "mean_ms": 0.2647,
+    "rps": 3778.5
+  }
+]

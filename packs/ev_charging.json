@@ -1,0 +1,122 @@
+{
+  "pack_id": "ev_charging",
+  "version": "1.0.0",
+  "description": "EV charging per-kWh pricing. Base ₹18. Peak hours add 25%. Fast chargers add 40%. Members receive 10% off. Floor ₹12. Ceiling ₹40. This pack was created without any engine changes — proving the domain-agnostic architecture.",
+
+  "unit": {
+    "kind": "currency",
+    "code": "INR",
+    "decimals": 2
+  },
+
+  "entity": {
+    "name": "charging_session",
+    "attributes": [
+      {
+        "key": "charger_type",
+        "type": "enum",
+        "values": ["slow", "fast", "ultra_fast"]
+      }
+    ]
+  },
+
+  "signals": [
+    { "key": "charger_type",      "type": "enum",    "values": ["slow","fast","ultra_fast"], "required": true },
+    { "key": "time_of_day",       "type": "enum",    "values": ["peak","off_peak","super_off_peak"], "required": true },
+    { "key": "grid_load",         "type": "number",  "min": 0, "max": 100, "required": false },
+    { "key": "membership",        "type": "enum",    "values": ["none","basic","premium"], "required": false },
+    { "key": "session_duration",  "type": "number",  "min": 0.1, "max": 24, "required": false }
+  ],
+
+  "base": {
+    "type": "fixed",
+    "value": 18
+  },
+
+  "stages": [
+    { "id": "charger",    "stacking": "first",       "description": "Charger type premium" },
+    { "id": "time_price", "stacking": "first",       "description": "Time-of-day pricing tier" },
+    { "id": "grid",       "stacking": "all",          "description": "Grid load surcharge" },
+    { "id": "membership", "stacking": "max_discount", "description": "Best membership discount" }
+  ],
+
+  "rules": [
+    {
+      "id": "R-CHARGER-ULTRA",
+      "stage": "charger",
+      "priority": 30,
+      "description": "Ultra-fast charger → +60%",
+      "when": { "all": [{ "signal": "charger_type", "op": "eq", "value": "ultra_fast" }] },
+      "then": { "op": "multiply", "value": 1.60 }
+    },
+    {
+      "id": "R-CHARGER-FAST",
+      "stage": "charger",
+      "priority": 20,
+      "description": "Fast charger → +40%",
+      "when": { "all": [{ "signal": "charger_type", "op": "eq", "value": "fast" }] },
+      "then": { "op": "multiply", "value": 1.40 }
+    },
+    {
+      "id": "R-CHARGER-SLOW",
+      "stage": "charger",
+      "priority": 10,
+      "description": "Slow charger → no adjustment",
+      "when": { "all": [{ "signal": "charger_type", "op": "eq", "value": "slow" }] },
+      "then": { "op": "multiply", "value": 1.00 }
+    },
+
+    {
+      "id": "R-TIME-PEAK",
+      "stage": "time_price",
+      "priority": 20,
+      "description": "Peak hours → +25%",
+      "when": { "all": [{ "signal": "time_of_day", "op": "eq", "value": "peak" }] },
+      "then": { "op": "multiply", "value": 1.25 }
+    },
+    {
+      "id": "R-TIME-SUPER-OFF",
+      "stage": "time_price",
+      "priority": 10,
+      "description": "Super off-peak → -15%",
+      "when": { "all": [{ "signal": "time_of_day", "op": "eq", "value": "super_off_peak" }] },
+      "then": { "op": "multiply", "value": 0.85 }
+    },
+
+    {
+      "id": "R-GRID-HIGH",
+      "stage": "grid",
+      "priority": 10,
+      "description": "High grid load (>80%) → +10%",
+      "when": { "all": [{ "signal": "grid_load", "op": "gt", "value": 80 }] },
+      "then": { "op": "multiply", "value": 1.10 }
+    },
+
+    {
+      "id": "R-MEMBERSHIP-PREMIUM",
+      "stage": "membership",
+      "priority": 20,
+      "description": "Premium member → -15%",
+      "when": { "all": [{ "signal": "membership", "op": "eq", "value": "premium" }] },
+      "then": { "op": "multiply", "value": 0.85 }
+    },
+    {
+      "id": "R-MEMBERSHIP-BASIC",
+      "stage": "membership",
+      "priority": 10,
+      "description": "Basic member → -10%",
+      "when": { "all": [{ "signal": "membership", "op": "eq", "value": "basic" }] },
+      "then": { "op": "multiply", "value": 0.90 }
+    }
+  ],
+
+  "constraints": [
+    { "id": "C-FLOOR",   "type": "floor",   "expr": "12" },
+    { "id": "C-CEILING", "type": "ceiling", "expr": "40" }
+  ],
+
+  "rounding": {
+    "mode": "nearest",
+    "step": 0.5
+  }
+}

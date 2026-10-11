@@ -1,0 +1,81 @@
+{
+  "environment": {
+    "python": "3.14.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "timestamp_utc": "2026-10-11T07:12:31.202404+00:00"
+  },
+  "concurrency": 4,
+  "results": [
+    {
+      "domain": "hospitality",
+      "mode": "api_http",
+      "iterations": 100,
+      "concurrency": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "p50_ms": 77.7979,
+      "p95_ms": 108.7789,
+      "p99_ms": 121.5762,
+      "mean_ms": 77.5757,
+      "rps": 50.5,
+      "wall_time_sec": 1.982
+    },
+    {
+      "domain": "ecommerce",
+      "mode": "api_http",
+      "iterations": 100,
+      "concurrency": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "p50_ms": 78.1784,
+      "p95_ms": 113.4161,
+      "p99_ms": 128.9127,
+      "mean_ms": 79.4503,
+      "rps": 49.9,
+      "wall_time_sec": 2.004
+    },
+    {
+      "domain": "banking",
+      "mode": "api_http",
+      "iterations": 100,
+      "concurrency": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "p50_ms": 71.6259,
+      "p95_ms": 107.1583,
+      "p99_ms": 142.9908,
+      "mean_ms": 72.7591,
+      "rps": 53.9,
+      "wall_time_sec": 1.856
+    },
+    {
+      "domain": "ev_charging",
+      "mode": "api_http",
+      "iterations": 100,
+      "concurrency": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "p50_ms": 72.1202,
+      "p95_ms": 98.2942,
+      "p99_ms": 111.8033,
+      "mean_ms": 71.8492,
+      "rps": 54.6,
+      "wall_time_sec": 1.83
+    },
+    {
+      "domain": "airline",
+      "mode": "api_http",
+      "iterations": 100,
+      "concurrency": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "p50_ms": 74.7625,
+      "p95_ms": 106.249,
+      "p99_ms": 135.0957,
+      "mean_ms": 74.5828,
+      "rps": 53.1,
+      "wall_time_sec": 1.884
+    }
+  ]
+}

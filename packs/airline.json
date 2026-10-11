@@ -1,0 +1,104 @@
+{
+  "pack_id": "airline",
+  "version": "1.0.0",
+  "description": "Synthetic airline fare pricing with route distance, demand and seat pressure, cabin classes, baggage fees, fare floor, and fare cap.",
+  "unit": {
+    "kind": "currency",
+    "code": "USD",
+    "decimals": 2
+  },
+  "entity": {
+    "name": "flight_booking",
+    "attributes": [
+      {
+        "key": "cabin_class",
+        "type": "enum",
+        "values": ["economy", "premium", "business"]
+      }
+    ]
+  },
+  "signals": [
+    { "key": "cabin_class", "type": "enum", "values": ["economy", "premium", "business"], "required": true },
+    { "key": "base_fare", "type": "number", "min": 20, "max": 1000, "required": true },
+    { "key": "distance_km", "type": "number", "min": 100, "max": 10000, "required": true },
+    { "key": "demand_index", "type": "number", "min": 0, "max": 100, "required": true },
+    { "key": "available_seats", "type": "integer", "min": 0, "max": 500, "required": true },
+    { "key": "total_seats", "type": "integer", "min": 1, "max": 500, "required": true },
+    { "key": "days_to_departure", "type": "integer", "min": 0, "max": 365, "required": true },
+    { "key": "checked_bags", "type": "integer", "min": 0, "max": 10, "required": false },
+    { "key": "competitor_price", "type": "number", "min": 0, "max": 5000, "required": false }
+  ],
+  "base": {
+    "type": "formula",
+    "expr": "base_fare + distance_km * 0.08"
+  },
+  "stages": [
+    { "id": "demand", "stacking": "first", "description": "Demand and seat pressure selects one fare multiplier." },
+    { "id": "cabin", "stacking": "first", "description": "Cabin class selects one service multiplier." },
+    { "id": "fees", "stacking": "all", "description": "Optional checked baggage fee is additive." }
+  ],
+  "rules": [
+    {
+      "id": "R-DEMAND-CRITICAL",
+      "stage": "demand",
+      "priority": 100,
+      "description": "Very high demand, low seats, and near departure apply a 2.4x multiplier.",
+      "when": { "all": [
+        { "signal": "demand_index", "op": "gte", "value": 85 },
+        { "signal": "available_seats", "op": "lte", "value": 10 },
+        { "signal": "days_to_departure", "op": "lte", "value": 3 }
+      ]},
+      "then": { "op": "multiply", "value": 2.4 }
+    },
+    {
+      "id": "R-DEMAND-HIGH",
+      "stage": "demand",
+      "priority": 80,
+      "description": "High demand and limited seats apply a 1.5x multiplier.",
+      "when": { "all": [
+        { "signal": "demand_index", "op": "gte", "value": 70 },
+        { "signal": "available_seats", "op": "lte", "value": 25 },
+        { "signal": "days_to_departure", "op": "lte", "value": 14 }
+      ]},
+      "then": { "op": "multiply", "value": 1.5 }
+    },
+    {
+      "id": "R-DEMAND-ELEVATED",
+      "stage": "demand",
+      "priority": 60,
+      "description": "Elevated demand applies a 1.2x multiplier.",
+      "when": { "all": [{ "signal": "demand_index", "op": "gte", "value": 60 }] },
+      "then": { "op": "multiply", "value": 1.2 }
+    },
+    {
+      "id": "R-CABIN-BUSINESS",
+      "stage": "cabin",
+      "priority": 30,
+      "description": "Business cabin applies a 2x service multiplier.",
+      "when": { "all": [{ "signal": "cabin_class", "op": "eq", "value": "business" }] },
+      "then": { "op": "multiply", "value": 2.0 }
+    },
+    {
+      "id": "R-CABIN-PREMIUM",
+      "stage": "cabin",
+      "priority": 20,
+      "description": "Premium cabin applies a 1.4x service multiplier.",
+      "when": { "all": [{ "signal": "cabin_class", "op": "eq", "value": "premium" }] },
+      "then": { "op": "multiply", "value": 1.4 }
+    },
+    {
+      "id": "R-CHECKED-BAG",
+      "stage": "fees",
+      "priority": 10,
+      "description": "Each checked bag adds a synthetic $25 fee.",
+      "when": { "all": [{ "signal": "checked_bags", "op": "gte", "value": 1 }] },
+      "then": { "op": "add", "value": 25 }
+    }
+  ],
+  "constraints": [
+    { "id": "C-MINIMUM-FARE", "type": "floor", "expr": "50" },
+    { "id": "C-FARE-CAP", "type": "ceiling", "expr": "base * 2.5" },
+    { "id": "C-MAX-CHANGE", "type": "max_change_pct", "value": 150 }
+  ],
+  "rounding": { "mode": "nearest", "step": 5 }
+}

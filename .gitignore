@@ -1,0 +1,22 @@
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+
+# Local configuration and runtime data
+.env
+.env.*
+!.env.example
+api/data/
+*.db
+
+# Frontend dependencies and build output
+web/node_modules/
+web/dist/
+
+# Local phase notes
+/phase*.txt

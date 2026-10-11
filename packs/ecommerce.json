@@ -1,0 +1,285 @@
+{
+  "pack_id": "ecommerce",
+  "version": "1.0.0",
+  "description": "E-commerce dynamic product pricing. Demonstrates inventory-based markdown, demand-surge recovery, flash sale rules, loyalty tiers, bulk discounts, and time-based clearance. Proves domain-agnostic architecture: zero engine changes needed for a new domain.",
+
+  "unit": {
+    "kind": "currency",
+    "code": "INR",
+    "decimals": 2
+  },
+
+  "entity": {
+    "name": "product_listing",
+    "attributes": [
+      {
+        "key": "category",
+        "type": "enum",
+        "values": ["electronics", "fashion", "grocery", "home_appliances", "beauty"]
+      }
+    ]
+  },
+
+  "signals": [
+    {
+      "key": "category",
+      "type": "enum",
+      "values": ["electronics", "fashion", "grocery", "home_appliances", "beauty"],
+      "required": true
+    },
+    {
+      "key": "mrp",
+      "type": "number",
+      "min": 1,
+      "max": 1000000,
+      "required": true
+    },
+    {
+      "key": "inventory_pct",
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "required": true
+    },
+    {
+      "key": "demand_score",
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "required": true
+    },
+    {
+      "key": "customer_tier",
+      "type": "enum",
+      "values": ["guest", "regular", "prime", "elite"],
+      "required": false
+    },
+    {
+      "key": "quantity",
+      "type": "integer",
+      "min": 1,
+      "max": 500,
+      "required": false
+    },
+    {
+      "key": "is_flash_sale",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "key": "days_since_listed",
+      "type": "integer",
+      "min": 0,
+      "max": 3650,
+      "required": false
+    }
+  ],
+
+  "base": {
+    "type": "formula",
+    "expr": "mrp"
+  },
+
+  "stages": [
+    {
+      "id": "base_category",
+      "stacking": "first",
+      "description": "Category standard discount off MRP — first matching category rule wins"
+    },
+    {
+      "id": "inventory",
+      "stacking": "first",
+      "description": "Inventory-driven adjustment: scarcity premium or excess markdown"
+    },
+    {
+      "id": "demand",
+      "stacking": "all",
+      "description": "Demand-score based price recovery — stacks on top of inventory"
+    },
+    {
+      "id": "clearance",
+      "stacking": "first",
+      "description": "Time-based clearance markdown for aged listings"
+    },
+    {
+      "id": "flash_sale",
+      "stacking": "all",
+      "description": "Flash sale discount — applied when flash sale is active"
+    },
+    {
+      "id": "customer",
+      "stacking": "max_discount",
+      "description": "Best loyalty tier or bulk purchase discount wins"
+    }
+  ],
+
+  "rules": [
+    {
+      "id": "R-CAT-ELECTRONICS",
+      "stage": "base_category",
+      "priority": 50,
+      "description": "Electronics: 15% standard discount off MRP",
+      "when": { "all": [{ "signal": "category", "op": "eq", "value": "electronics" }] },
+      "then": { "op": "multiply", "value": 0.85 }
+    },
+    {
+      "id": "R-CAT-FASHION",
+      "stage": "base_category",
+      "priority": 50,
+      "description": "Fashion: 30% standard discount off MRP",
+      "when": { "all": [{ "signal": "category", "op": "eq", "value": "fashion" }] },
+      "then": { "op": "multiply", "value": 0.70 }
+    },
+    {
+      "id": "R-CAT-GROCERY",
+      "stage": "base_category",
+      "priority": 50,
+      "description": "Grocery: 5% standard discount (tight margins)",
+      "when": { "all": [{ "signal": "category", "op": "eq", "value": "grocery" }] },
+      "then": { "op": "multiply", "value": 0.95 }
+    },
+    {
+      "id": "R-CAT-HOME",
+      "stage": "base_category",
+      "priority": 50,
+      "description": "Home appliances: 20% standard discount off MRP",
+      "when": { "all": [{ "signal": "category", "op": "eq", "value": "home_appliances" }] },
+      "then": { "op": "multiply", "value": 0.80 }
+    },
+    {
+      "id": "R-CAT-BEAUTY",
+      "stage": "base_category",
+      "priority": 50,
+      "description": "Beauty: 25% standard discount off MRP",
+      "when": { "all": [{ "signal": "category", "op": "eq", "value": "beauty" }] },
+      "then": { "op": "multiply", "value": 0.75 }
+    },
+
+    {
+      "id": "R-INV-SCARCE",
+      "stage": "inventory",
+      "priority": 30,
+      "description": "Very low inventory (≤10%) — scarcity premium +12%",
+      "when": { "all": [{ "signal": "inventory_pct", "op": "lte", "value": 10 }] },
+      "then": { "op": "multiply", "value": 1.12 }
+    },
+    {
+      "id": "R-INV-LOW",
+      "stage": "inventory",
+      "priority": 20,
+      "description": "Low inventory (11–30%) — mild scarcity premium +5%",
+      "when": { "all": [{ "signal": "inventory_pct", "op": "between", "value": [11, 30] }] },
+      "then": { "op": "multiply", "value": 1.05 }
+    },
+    {
+      "id": "R-INV-EXCESS",
+      "stage": "inventory",
+      "priority": 10,
+      "description": "Excess inventory (>80%) — clearance markdown -8%",
+      "when": { "all": [{ "signal": "inventory_pct", "op": "gt", "value": 80 }] },
+      "then": { "op": "multiply", "value": 0.92 }
+    },
+
+    {
+      "id": "R-DEMAND-VIRAL",
+      "stage": "demand",
+      "priority": 20,
+      "description": "Viral demand (score≥80) — recover 8% off discount",
+      "when": { "all": [{ "signal": "demand_score", "op": "gte", "value": 80 }] },
+      "then": { "op": "multiply", "value": 1.08 }
+    },
+    {
+      "id": "R-DEMAND-HIGH",
+      "stage": "demand",
+      "priority": 10,
+      "description": "High demand (score 60–79) — recover 4% off discount",
+      "when": { "all": [{ "signal": "demand_score", "op": "between", "value": [60, 79] }] },
+      "then": { "op": "multiply", "value": 1.04 }
+    },
+
+    {
+      "id": "R-CLEARANCE-OLD",
+      "stage": "clearance",
+      "priority": 20,
+      "description": "Aged listing (>180 days) — aggressive clearance -20%",
+      "when": { "all": [{ "signal": "days_since_listed", "op": "gt", "value": 180 }] },
+      "then": { "op": "multiply", "value": 0.80 }
+    },
+    {
+      "id": "R-CLEARANCE-AGING",
+      "stage": "clearance",
+      "priority": 10,
+      "description": "Aging listing (90–180 days) — mild clearance -10%",
+      "when": { "all": [{ "signal": "days_since_listed", "op": "between", "value": [90, 180] }] },
+      "then": { "op": "multiply", "value": 0.90 }
+    },
+
+    {
+      "id": "R-FLASH-SALE",
+      "stage": "flash_sale",
+      "priority": 10,
+      "description": "Flash sale active — additional -15%",
+      "when": { "all": [{ "signal": "is_flash_sale", "op": "eq", "value": true }] },
+      "then": { "op": "multiply", "value": 0.85 }
+    },
+
+    {
+      "id": "R-TIER-ELITE",
+      "stage": "customer",
+      "priority": 40,
+      "description": "Elite member — extra -10%",
+      "when": { "all": [{ "signal": "customer_tier", "op": "eq", "value": "elite" }] },
+      "then": { "op": "multiply", "value": 0.90 }
+    },
+    {
+      "id": "R-TIER-PRIME",
+      "stage": "customer",
+      "priority": 30,
+      "description": "Prime member — extra -7%",
+      "when": { "all": [{ "signal": "customer_tier", "op": "eq", "value": "prime" }] },
+      "then": { "op": "multiply", "value": 0.93 }
+    },
+    {
+      "id": "R-TIER-REGULAR",
+      "stage": "customer",
+      "priority": 20,
+      "description": "Regular member — extra -3%",
+      "when": { "all": [{ "signal": "customer_tier", "op": "eq", "value": "regular" }] },
+      "then": { "op": "multiply", "value": 0.97 }
+    },
+    {
+      "id": "R-BULK-10PLUS",
+      "stage": "customer",
+      "priority": 25,
+      "description": "Bulk purchase ≥10 units — extra -12%",
+      "when": { "all": [{ "signal": "quantity", "op": "gte", "value": 10 }] },
+      "then": { "op": "multiply", "value": 0.88 }
+    },
+    {
+      "id": "R-BULK-5PLUS",
+      "stage": "customer",
+      "priority": 15,
+      "description": "Bulk purchase 5–9 units — extra -6%",
+      "when": { "all": [{ "signal": "quantity", "op": "between", "value": [5, 9] }] },
+      "then": { "op": "multiply", "value": 0.94 }
+    }
+  ],
+
+  "constraints": [
+    {
+      "id": "C-FLOOR",
+      "type": "floor",
+      "expr": "base * 0.40"
+    },
+    {
+      "id": "C-MRP-CAP",
+      "type": "ceiling",
+      "expr": "base * 1.00"
+    }
+  ],
+
+  "rounding": {
+    "mode": "nearest",
+    "step": 1
+  }
+}
